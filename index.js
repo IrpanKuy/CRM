@@ -1,568 +1,486 @@
 /**
- * SISTEM MANAJEMEN CUSTOMER PERIKLANAN (AdManage System)
- * 
- * File ini menangani seluruh logika aplikasi, mulai dari pengelolaan state data,
- * manipulasi DOM untuk tabel dan dashboard, hingga sistem dialog kustom.
+ * SISTEM MANAJEMEN PELANGGAN (AdManage System)
+ *
+ * Logika utama untuk mengelola data pelanggan, statistik,
+ * dan fitur ekspor/impor.
  */
 
-// --- STATE DATA APLIKASI ---
+// --- PENYIMPANAN DATA (STATE) ---
 
-/**
- * Variabel global untuk menyimpan daftar customer.
- * Data disimpan dalam bentuk array of objects.
- */
-let customers = [];
+// List utama penampung data pelanggan
+let dataPelanggan = [];
 
-/**
- * Daftar Master Data Kota untuk pilihan di dropdown.
- * Daftar ini bersifat dinamis (bisa bertambah via UI).
- */
-let masterCities = [
-    "Bandung",
-    "Balikpapan",
-    "Denpasar",
-    "Jakarta Pusat",
-    "Jakarta Selatan",
-    "Makassar",
-    "Medan",
-    "Semarang",
-    "Surabaya",
-    "Yogyakarta",
+// Daftar pilihan kota untuk dropdown
+let listKota = [
+  "Bandung",
+  "Balikpapan",
+  "Denpasar",
+  "Jakarta Pusat",
+  "Jakarta Selatan",
+  "Makassar",
+  "Medan",
+  "Semarang",
+  "Surabaya",
+  "Yogyakarta",
 ];
 
-/**
- * Daftar Master Data Perusahaan untuk pilihan di dropdown.
- * Daftar ini bersifat dinamis (bisa bertambah via UI).
- */
-let masterCompanies = [
-    "Agensi Kreatif Muda",
-    "CV. AdTech Sinergi",
-    "Global Advertising Inc.",
-    "PT. Kreatif Inspirasi",
-    "PT. Media Digital Nusantara",
-    "Sinar Mandiri Group",
+// Daftar pilihan perusahaan untuk dropdown
+let listPerusahaan = [
+  "Agensi Kreatif Muda",
+  "CV. AdTech Sinergi",
+  "Global Advertising Inc.",
+  "PT. Kreatif Inspirasi",
+  "PT. Media Digital Nusantara",
+  "Sinar Mandiri Group",
 ];
 
-// --- INISIALISASI APLIKASI ---
+// --- STARTUP APLIKASI ---
 
-/**
- * Menunggu seluruh konten DOM dimuat sebelum menjalankan logika awal.
- */
+// Jalankan fungsi awal saat halaman selesai dimuat
 document.addEventListener("DOMContentLoaded", () => {
-    // Merender pilihan kota dan perusahaan ke elemen <select>
-    renderDropdowns();
-    
-    // Melakukan render awal untuk dashboard dan tabel (data awal kosong)
-    renderAll();
+  updateDropdown();
+  refreshTampilan();
 
-    // Mendaftarkan event listener untuk pengiriman formulir customer
-    const customerForm = document.getElementById("customerForm");
-    if (customerForm) {
-        customerForm.addEventListener("submit", saveCustomer);
-    }
+  const formInput = document.getElementById("customerForm");
+  if (formInput) {
+    formInput.addEventListener("submit", simpanData);
+  }
 });
 
-// --- SISTEM DIALOG KUSTOM (Alert, Confirm, Prompt) ---
+// --- SISTEM MODAL DIALOG KUSTOM (ALERT & PROMPT) ---
 
-/**
- * Variabel untuk menyimpan fungsi callback saat konfirmasi dialog disetujui.
- */
-let dialogConfirmCallback = null;
+// --- Bagian Alert & Konfirmasi ---
+function kasihTau(pesan, aksi, tipe = "info") {
+  const modal = document.getElementById("alertModal");
+  const box = document.getElementById("alertBox");
+  const teksPesan = document.getElementById("alertMessage");
+  const tombolBatal = document.getElementById("alertBtnCancel");
+  const tombolOk = document.getElementById("alertBtnOk");
+  const ikon = document.getElementById("alertIcon");
+  const judul = document.getElementById("alertTitle");
 
-/**
- * Fungsi utama untuk menampilkan modal dialog kustom.
- * @param {Object} options - Konfigurasi dialog (type, title, message, onConfirm)
- */
-function showDialog({ type, title, message, onConfirm }) {
-    const modal = document.getElementById("customDialogModal");
-    const box = document.getElementById("customDialogBox");
-    const titleEl = document.getElementById("dialogTitle");
-    const msgEl = document.getElementById("dialogMessage");
-    const inputEl = document.getElementById("dialogInput");
-    const btnCancel = document.getElementById("dialogBtnCancel");
-    const btnOk = document.getElementById("dialogBtnOk");
-    const iconEl = document.getElementById("dialogIcon");
+  teksPesan.innerText = pesan;
+  tombolBatal.classList.add("hidden"); // Default hidden
 
-    titleEl.innerText = title;
-    msgEl.innerText = message;
-    dialogConfirmCallback = onConfirm;
+  // Atur Gaya Dialog berdasarkan Tipe
+  if (tipe === "error") {
+    judul.innerText = "Error";
+    ikon.className = "fas fa-times-circle text-red-500 mr-2";
+  } else if (tipe === "confirm" || (aksi && pesan.includes("?"))) {
+    judul.innerText = "Konfirmasi";
+    tombolBatal.classList.remove("hidden");
+    ikon.className = "fas fa-question-circle text-amber-500 mr-2";
+  } else {
+    judul.innerText = "Info";
+    ikon.className = "fas fa-info-circle text-blue-500 mr-2";
+  }
 
-    // Reset status tampilan elemen input dan tombol batal
-    btnCancel.classList.add("hidden");
-    inputEl.classList.add("hidden");
-    inputEl.value = "";
+  tombolOk.onclick = () => {
+    if (aksi) aksi();
+    tutupAlert();
+  };
+  tombolBatal.onclick = tutupAlert;
 
-    // Mengatur icon berdasarkan tipe dialog
-    if (type === "alert") {
-        iconEl.className = "fas fa-exclamation-triangle text-amber-500 mr-2";
-    } else if (type === "confirm") {
-        iconEl.className = "fas fa-question-circle text-blue-500 mr-2";
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  setTimeout(() => {
+    box.classList.remove("scale-95", "opacity-0");
+    box.classList.add("scale-100", "opacity-100");
+  }, 10);
+}
+
+function mintaKonfirmasi(pesan, aksi) {
+  // Alias untuk kasihTau dengan logika konfirmasi
+  kasihTau(pesan, aksi);
+}
+
+function tutupAlert() {
+  const modal = document.getElementById("alertModal");
+  const box = document.getElementById("alertBox");
+  box.classList.remove("scale-100", "opacity-100");
+  box.classList.add("scale-95", "opacity-0");
+  setTimeout(() => {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }, 200);
+}
+
+// --- Bagian Prompt (Input) ---
+function mintaInput(pesan, aksi) {
+  const modal = document.getElementById("promptModal");
+  const box = document.getElementById("promptBox");
+  const teksPesan = document.getElementById("promptMessage");
+  const inputTeks = document.getElementById("promptInput");
+  const tombolBatal = document.getElementById("promptBtnCancel");
+  const tombolOk = document.getElementById("promptBtnOk");
+
+  teksPesan.innerText = pesan;
+  inputTeks.value = "";
+
+  tombolOk.onclick = () => {
+    if (aksi) aksi(inputTeks.value);
+    tutupPrompt();
+  };
+  tombolBatal.onclick = tutupPrompt;
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  setTimeout(() => {
+    box.classList.remove("scale-95", "opacity-0");
+    box.classList.add("scale-100", "opacity-100");
+    inputTeks.focus();
+  }, 10);
+}
+
+function tutupPrompt() {
+  const modal = document.getElementById("promptModal");
+  const box = document.getElementById("promptBox");
+  box.classList.remove("scale-100", "opacity-100");
+  box.classList.add("scale-95", "opacity-0");
+  setTimeout(() => {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }, 200);
+}
+
+// --- KELOLA LIST MASTER (KOTA & PERUSAHAAN) ---
+
+// Fungsi buat nge-update isi dropdown dari list master
+function updateDropdown() {
+  const selectKota = document.getElementById("formKota");
+  const selectPT = document.getElementById("formPerusahaan");
+
+  if (!selectKota || !selectPT) return;
+
+  const kotaPilihan = selectKota.value;
+  const ptPilihan = selectPT.value;
+
+  // Reset dan isi ulang Kota
+  selectKota.innerHTML = '<option value="">Pilih Kota</option>';
+  listKota.sort().forEach((k) => selectKota.add(new Option(k, k)));
+  if (listKota.includes(kotaPilihan)) selectKota.value = kotaPilihan;
+
+  // Reset dan isi ulang Perusahaan
+  selectPT.innerHTML = '<option value="">Pilih Perusahaan</option>';
+  listPerusahaan.sort().forEach((p) => selectPT.add(new Option(p, p)));
+  if (listPerusahaan.includes(ptPilihan)) selectPT.value = ptPilihan;
+}
+
+function tambahDataPT() {
+  mintaInput("Masukkan nama Perusahaan baru:", (namaBaru) => {
+    if (!namaBaru || namaBaru.trim() === "") {
+      return kasihTau("Nama perusahaan tidak boleh kosong!", null, "error");
+    }
+
+    const namaFix = namaBaru.trim();
+    // Cek duplikat (nggak peka huruf besar-kecil)
+    const sudahAda = listPerusahaan.some(
+      (p) => p.toLowerCase() === namaFix.toLowerCase(),
+    );
+
+    if (!sudahAda) {
+      listPerusahaan.push(namaFix);
+      updateDropdown();
+      document.getElementById("formPerusahaan").value = namaFix;
     } else {
-        iconEl.className = "fas fa-edit text-slate-500 mr-2";
+      kasihTau(`Perusahaan "${namaFix}" sudah terdaftar.`, null, "error");
+    }
+  });
+}
+
+function hapusDataPT() {
+  const pilihan = document.getElementById("formPerusahaan").value;
+  if (!pilihan) return kasihTau("Pilih dulu perusahaan yang mau dihapus.");
+
+  // Cek dulu apakah ada pelanggan yang pakai perusahaan ini
+  const adaYgPakai = dataPelanggan.some((p) => p.perusahaan === pilihan);
+  if (adaYgPakai)
+    return kasihTau("Gagal! Perusahaan ini masih dipakai oleh data pelanggan.");
+
+  mintaKonfirmasi(`Yakin mau hapus "${pilihan}" dari list?`, () => {
+    listPerusahaan = listPerusahaan.filter((p) => p !== pilihan);
+    updateDropdown();
+  });
+}
+
+function tambahDataKota() {
+  mintaInput("Masukkan nama Kota baru:", (namaBaru) => {
+    if (!namaBaru || namaBaru.trim() === "") {
+      return kasihTau("Nama kota tidak boleh kosong!", null, "error");
     }
 
-    // Event handler untuk tombol
-    btnCancel.onclick = closeDialog;
-    btnOk.onclick = () => {
-        if (type === "prompt") {
-            if (onConfirm) onConfirm(inputEl.value);
-        } else {
-            if (onConfirm) onConfirm();
-        }
-        closeDialog();
-    };
+    const namaFix = namaBaru.trim();
+    // Cek duplikat (nggak peka huruf besar-kecil)
+    const sudahAda = listKota.some(
+      (k) => k.toLowerCase() === namaFix.toLowerCase(),
+    );
 
-    // Tampilkan elemen tambahan jika tipe adalah prompt atau confirm
-    if (type === "prompt") {
-        inputEl.classList.remove("hidden");
-        btnCancel.classList.remove("hidden");
-        setTimeout(() => inputEl.focus(), 100);
-    } else if (type === "confirm") {
-        btnCancel.classList.remove("hidden");
+    if (!sudahAda) {
+      listKota.push(namaFix);
+      updateDropdown();
+      document.getElementById("formKota").value = namaFix;
+    } else {
+      kasihTau(`Kota "${namaFix}" sudah ada dalam daftar.`, null, "error");
     }
-
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
-
-    // Animasi masuk modal (menggunakan timeout kecil agar transisi CSS berjalan)
-    setTimeout(() => {
-        box.classList.remove("scale-95", "opacity-0");
-        box.classList.add("scale-100", "opacity-100");
-    }, 10);
+  });
 }
 
-/**
- * Fungsi untuk menutup modal dialog kustom dengan animasi.
- */
-function closeDialog() {
-    const modal = document.getElementById("customDialogModal");
-    const box = document.getElementById("customDialogBox");
+function hapusDataKota() {
+  const pilihan = document.getElementById("formKota").value;
+  if (!pilihan) return kasihTau("Pilih dulu kota yang mau dihapus.");
 
-    // Animasi keluar
-    box.classList.remove("scale-100", "opacity-100");
-    box.classList.add("scale-95", "opacity-0");
+  const adaYgPakai = dataPelanggan.some((p) => p.kota === pilihan);
+  if (adaYgPakai)
+    return kasihTau("Gagal! Kota ini masih dipakai oleh data pelanggan.");
 
-    setTimeout(() => {
-        modal.classList.add("hidden");
-        modal.classList.remove("flex");
-        dialogConfirmCallback = null;
-    }, 200);
+  mintaKonfirmasi(`Yakin mau hapus "${pilihan}" dari list?`, () => {
+    listKota = listKota.filter((k) => k !== pilihan);
+    updateDropdown();
+  });
 }
 
-/**
- * Helper untuk memanggil alert kustom.
- */
-const myAlert = (message) =>
-    showDialog({ type: "alert", title: "Perhatian", message });
+// --- RENDER TAMPILAN (TABEL & STATISTIK) ---
 
-/**
- * Helper untuk memanggil dialog konfirmasi kustom.
- */
-const myConfirm = (message, onConfirm) =>
-    showDialog({
-        type: "confirm",
-        title: "Konfirmasi",
-        message,
-        onConfirm,
-    });
-
-/**
- * Helper untuk memanggil dialog input (prompt) kustom.
- */
-const myPrompt = (message, onConfirm) =>
-    showDialog({ type: "prompt", title: "Input Data", message, onConfirm });
-
-// --- MANAJEMEN DROPDOWN (MASTER DATA) ---
-
-/**
- * Fungsi untuk merender ulang isi dari dropdown Kota dan Perusahaan.
- * Selalu mengambil data terbaru dari array masterCities dan masterCompanies.
- */
-function renderDropdowns() {
-    const citySelect = document.getElementById("formKota");
-    const companySelect = document.getElementById("formPerusahaan");
-
-    if (!citySelect || !companySelect) return;
-
-    // Simpan nilai yang sedang terpilih agar tidak hilang saat re-render
-    const currentCity = citySelect.value;
-    const currentCompany = companySelect.value;
-
-    // Render Dropdown Kota
-    citySelect.innerHTML = '<option value="">Pilih Kota</option>';
-    masterCities.sort().forEach((city) => {
-        citySelect.add(new Option(city, city));
-    });
-    if (masterCities.includes(currentCity)) citySelect.value = currentCity;
-
-    // Render Dropdown Perusahaan
-    companySelect.innerHTML = '<option value="">Pilih Perusahaan</option>';
-    masterCompanies.sort().forEach((company) => {
-        companySelect.add(new Option(company, company));
-    });
-    if (masterCompanies.includes(currentCompany))
-        companySelect.value = currentCompany;
+function refreshTampilan() {
+  updateStatistik();
+  buatTabel(dataPelanggan);
 }
 
-/**
- * Menambahkan perusahaan baru ke dalam daftar master data.
- */
-function addCompany() {
-    myPrompt("Masukkan nama Perusahaan baru:", (newVal) => {
-        if (newVal && newVal.trim() !== "") {
-            const trimmed = newVal.trim();
-            if (!masterCompanies.includes(trimmed)) {
-                masterCompanies.push(trimmed);
-                renderDropdowns();
-                document.getElementById("formPerusahaan").value = trimmed;
-            } else {
-                myAlert("Perusahaan tersebut sudah terdaftar dalam pilihan.");
-            }
-        }
-    });
-}
+function updateStatistik() {
+  const elTotal = document.getElementById("statTotal");
+  if (elTotal) elTotal.innerText = dataPelanggan.length;
 
-/**
- * Menghapus perusahaan dari daftar master data.
- * Dilengkapi validasi agar tidak menghapus data yang sedangan digunakan oleh customer.
- */
-function deleteCompany() {
-    const select = document.getElementById("formPerusahaan");
-    const val = select.value;
-    if (!val) {
-        myAlert("Silakan pilih perusahaan yang ingin dihapus terlebih dahulu.");
-        return;
-    }
+  const hitungKota = {};
+  const hitungPT = {};
 
-    // Validasi: Cek jika ada customer yang menggunakan perusahaan ini
-    const isUsed = customers.some((c) => c.perusahaan === val);
-    if (isUsed) {
-        myAlert(`Gagal menghapus! Perusahaan "${val}" masih digunakan oleh data customer.`);
-        return;
-    }
+  dataPelanggan.forEach((p) => {
+    hitungKota[p.kota] = (hitungKota[p.kota] || 0) + 1;
+    hitungPT[p.perusahaan] = (hitungPT[p.perusahaan] || 0) + 1;
+  });
 
-    myConfirm(`Apakah Anda yakin ingin menghapus "${val}" dari daftar pilihan?`, () => {
-        masterCompanies = masterCompanies.filter((c) => c !== val);
-        renderDropdowns();
-    });
-}
-
-/**
- * Menambahkan kota baru ke dalam daftar master data.
- */
-function addCity() {
-    myPrompt("Masukkan nama Kota baru:", (newVal) => {
-        if (newVal && newVal.trim() !== "") {
-            const trimmed = newVal.trim();
-            if (!masterCities.includes(trimmed)) {
-                masterCities.push(trimmed);
-                renderDropdowns();
-                document.getElementById("formKota").value = trimmed;
-            } else {
-                myAlert("Kota tersebut sudah terdaftar dalam pilihan.");
-            }
-        }
-    });
-}
-
-/**
- * Menghapus kota dari daftar master data.
- * Dilengkapi validasi penggunaan data.
- */
-function deleteCity() {
-    const select = document.getElementById("formKota");
-    const val = select.value;
-    if (!val) {
-        myAlert("Silakan pilih kota yang ingin dihapus terlebih dahulu.");
-        return;
-    }
-
-    const isUsed = customers.some((c) => c.kota === val);
-    if (isUsed) {
-        myAlert(`Gagal menghapus! Kota "${val}" masih digunakan oleh data customer.`);
-        return;
-    }
-
-    myConfirm(`Apakah Anda yakin ingin menghapus "${val}" dari daftar pilihan?`, () => {
-        masterCities = masterCities.filter((c) => c !== val);
-        renderDropdowns();
-    });
-}
-
-// --- LOGIKA RENDER DASHBOARD & TABEL ---
-
-/**
- * Memperbarui seluruh tampilan aplikasi (Dashboard + Tabel).
- */
-function renderAll() {
-    renderDashboard();
-    renderTable(customers);
-}
-
-/**
- * Menghitung statistik dan merender kartu dashboard.
- */
-function renderDashboard() {
-    // Update Total Customer
-    const statTotalEl = document.getElementById("statTotal");
-    if (statTotalEl) statTotalEl.innerText = customers.length;
-
-    // Inisialisasi object untuk perhitungan (aggregation)
-    const cityCount = {};
-    const companyCount = {};
-
-    customers.forEach((c) => {
-        cityCount[c.kota] = (cityCount[c.kota] || 0) + 1;
-        companyCount[c.perusahaan] = (companyCount[c.perusahaan] || 0) + 1;
-    });
-
-    // Render Statistik Kota
-    const cityContainer = document.getElementById("statCity");
-    if (cityContainer) {
-        cityContainer.innerHTML = "";
-        const sortedCities = Object.entries(cityCount).sort((a, b) => b[1] - a[1]);
-
-        if (sortedCities.length === 0) {
-            cityContainer.innerHTML = '<p class="text-slate-500 text-sm italic">Belum ada data...</p>';
-        } else {
-            sortedCities.forEach(([city, count]) => {
-                cityContainer.innerHTML += `
+  // Cetak ke layar (Stats Kota)
+  const boxKota = document.getElementById("statCity");
+  if (boxKota) {
+    boxKota.innerHTML = "";
+    const sorted = Object.entries(hitungKota).sort((a, b) => b[1] - a[1]);
+    if (sorted.length === 0) {
+      boxKota.innerHTML =
+        '<p class="text-slate-500 text-sm italic">Belum ada data...</p>';
+    } else {
+      sorted.forEach(([k, jml]) => {
+        boxKota.innerHTML += `
                     <div class="flex justify-between items-center mb-2 border-b border-slate-300 border-dashed pb-1 last:border-0">
-                        <span class="text-sm text-slate-700 truncate pr-2">${city}</span>
-                        <span class="bg-slate-700 text-white text-xs py-0.5 px-2 rounded-full font-bold">${count}</span>
+                        <span class="text-sm text-slate-700 truncate pr-2">${k}</span>
+                        <span class="bg-slate-700 text-white text-xs py-0.5 px-2 rounded-full font-bold">${jml}</span>
                     </div>
                 `;
-            });
-        }
+      });
     }
+  }
 
-    // Render Statistik Perusahaan
-    const companyContainer = document.getElementById("statCompany");
-    if (companyContainer) {
-        companyContainer.innerHTML = "";
-        const sortedCompanies = Object.entries(companyCount).sort((a, b) => b[1] - a[1]);
-
-        if (sortedCompanies.length === 0) {
-            companyContainer.innerHTML = '<p class="text-slate-500 text-sm italic">Belum ada data...</p>';
-        } else {
-            sortedCompanies.forEach(([company, count]) => {
-                companyContainer.innerHTML += `
+  // Cetak ke layar (Stats Perusahaan)
+  const boxPT = document.getElementById("statCompany");
+  if (boxPT) {
+    boxPT.innerHTML = "";
+    const sorted = Object.entries(hitungPT).sort((a, b) => b[1] - a[1]);
+    if (sorted.length === 0) {
+      boxPT.innerHTML =
+        '<p class="text-slate-500 text-sm italic">Belum ada data...</p>';
+    } else {
+      sorted.forEach(([p, jml]) => {
+        boxPT.innerHTML += `
                     <div class="flex justify-between items-center mb-2 border-b border-slate-300 border-dashed pb-1 last:border-0">
-                        <span class="text-sm text-slate-700 truncate pr-2" title="${company}">${company}</span>
-                        <span class="bg-slate-700 text-white text-xs py-0.5 px-2 rounded-full font-bold">${count}</span>
+                        <span class="text-sm text-slate-700 truncate pr-2" title="${p}">${p}</span>
+                        <span class="bg-slate-700 text-white text-xs py-0.5 px-2 rounded-full font-bold">${jml}</span>
                     </div>
                 `;
-            });
-        }
+      });
     }
+  }
 }
 
-/**
- * Merender baris data customer ke dalam tabel HTML.
- * @param {Array} dataToRender - Data customer yang akan ditampilkan.
- */
-function renderTable(dataToRender) {
-    const tbody = document.getElementById("tableBody");
-    const emptyState = document.getElementById("emptyState");
-    if (!tbody || !emptyState) return;
+function buatTabel(listData) {
+  const bodiTabel = document.getElementById("tableBody");
+  const infoKosong = document.getElementById("emptyState");
+  if (!bodiTabel || !infoKosong) return;
 
-    if (dataToRender.length === 0) {
-        tbody.innerHTML = "";
-        emptyState.classList.remove("hidden");
-    } else {
-        emptyState.classList.add("hidden");
-
-        let rowsHTML = "";
-        dataToRender.forEach((c, index) => {
-            rowsHTML += `
+  if (listData.length === 0) {
+    bodiTabel.innerHTML = "";
+    infoKosong.classList.remove("hidden");
+  } else {
+    infoKosong.classList.add("hidden");
+    let html = "";
+    listData.forEach((p, i) => {
+      html += `
                 <tr class="bg-white border-b border-slate-200 hover:bg-slate-50 transition-colors">
-                    <td class="px-6 py-3 font-medium text-slate-500">${index + 1}</td>
-                    <td class="px-6 py-3 font-semibold text-slate-800">${c.nama}</td>
-                    <td class="px-6 py-3">${c.perusahaan}</td>
-                    <td class="px-6 py-3">${c.kota}</td>
-                    <td class="px-6 py-3 text-slate-600">${c.email}</td>
-                    <td class="px-6 py-3">${c.hp}</td>
-                    <td class="px-6 py-3 truncate max-w-xs" title="${c.alamat}">${c.alamat}</td>
+                    <td class="px-6 py-3 font-medium text-slate-500">${i + 1}</td>
+                    <td class="px-6 py-3 font-semibold text-slate-800">${p.nama}</td>
+                    <td class="px-6 py-3">${p.perusahaan}</td>
+                    <td class="px-6 py-3">${p.kota}</td>
+                    <td class="px-6 py-3 text-slate-600">${p.email}</td>
+                    <td class="px-6 py-3">${p.hp}</td>
+                    <td class="px-6 py-3 truncate max-w-xs" title="${p.alamat}">${p.alamat}</td>
                 </tr>
             `;
-        });
-        tbody.innerHTML = rowsHTML;
-    }
-}
-
-// --- FITUR PENCARIAN & MODAL ---
-
-/**
- * Fungsi untuk memfilter data berdasarkan input pencarian pengguna.
- */
-function handleSearch() {
-    const searchInput = document.getElementById("searchInput");
-    if (!searchInput) return;
-
-    const query = searchInput.value.toLowerCase();
-    const filteredData = customers.filter((c) => {
-        return (
-            (c.nama || "").toLowerCase().includes(query) ||
-            (c.perusahaan || "").toLowerCase().includes(query) ||
-            (c.kota || "").toLowerCase().includes(query) ||
-            (c.email || "").toLowerCase().includes(query) ||
-            (c.hp || "").toLowerCase().includes(query) ||
-            (c.alamat || "").toLowerCase().includes(query)
-        );
     });
-    renderTable(filteredData);
+    bodiTabel.innerHTML = html;
+  }
 }
 
-/**
- * Menampilkan modal form tambah customer.
- */
-function openModal() {
-    const modal = document.getElementById("customerModal");
-    if (modal) {
-        modal.classList.remove("hidden");
-        modal.classList.add("flex");
-        const focusEl = document.getElementById("formNama");
-        if (focusEl) focusEl.focus();
-    }
+// --- FITUR FORM & PENCARIAN ---
+
+function cariSekarang() {
+  const cariInput = document.getElementById("searchInput");
+  if (!cariInput) return;
+
+  const keyword = cariInput.value.toLowerCase();
+  const hasil = dataPelanggan.filter((p) => {
+    return (
+      (p.nama || "").toLowerCase().includes(keyword) ||
+      (p.perusahaan || "").toLowerCase().includes(keyword) ||
+      (p.kota || "").toLowerCase().includes(keyword) ||
+      (p.email || "").toLowerCase().includes(keyword) ||
+      (p.hp || "").toLowerCase().includes(keyword) ||
+      (p.alamat || "").toLowerCase().includes(keyword)
+    );
+  });
+  buatTabel(hasil);
 }
 
-/**
- * Menutup modal form dan mereset isinya.
- */
-function closeModal() {
-    const modal = document.getElementById("customerModal");
-    if (modal) {
-        modal.classList.add("hidden");
-        modal.classList.remove("flex");
-        const form = document.getElementById("customerForm");
-        if (form) form.reset();
-        const alert = document.getElementById("successAlert");
-        if (alert) alert.classList.add("hidden");
-    }
+function bukaForm() {
+  const modal = document.getElementById("customerModal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    const fokus = document.getElementById("formNama");
+    if (fokus) fokus.focus();
+  }
 }
 
-// Variabel untuk menyimpan timer notifikasi sukses
-let successAlertTimeout;
-
-/**
- * Mengambil data dari form dan menyimpannya ke array customers.
- * @param {Event} e - Event submit formulir.
- */
-function saveCustomer(e) {
-    if (e) e.preventDefault();
-
-    // Mengumpulkan data dari elemen input
-    const newCustomer = {
-        nama: document.getElementById("formNama").value.trim(),
-        perusahaan: document.getElementById("formPerusahaan").value,
-        kota: document.getElementById("formKota").value,
-        email: document.getElementById("formEmail").value.trim(),
-        hp: document.getElementById("formHp").value.trim(),
-        alamat: document.getElementById("formAlamat").value.trim(),
-    };
-
-    // Validasi sederhana (tambahan selain attribute 'required')
-    if (!newCustomer.nama || !newCustomer.perusahaan || !newCustomer.kota) {
-        myAlert("Mohon lengkapi semua data wajib yang bertanda bintang (*)");
-        return;
-    }
-
-    // Menambahkan ke array global
-    customers.push(newCustomer);
-
-    // Refresh UI
-    renderDashboard();
-    handleSearch();
-
-    // Reset form untuk input data berikutnya
+function tutupForm() {
+  const modal = document.getElementById("customerModal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
     const form = document.getElementById("customerForm");
     if (form) form.reset();
-    document.getElementById("formNama").focus();
-
-    // Tampilkan notifikasi sukses dalam modal
-    const alert = document.getElementById("successAlert");
-    if (alert) {
-        alert.classList.remove("hidden");
-        clearTimeout(successAlertTimeout);
-        successAlertTimeout = setTimeout(() => {
-            alert.classList.add("hidden");
-        }, 3000);
-    }
+    const alertBox = document.getElementById("successAlert");
+    if (alertBox) alertBox.classList.add("hidden");
+  }
 }
 
-// --- FITUR IMPORT & EXPORT ---
+let timeoutSukses;
 
-/**
- * Mengekspor data customer saat ini ke file .txt dalam format JSON.
- */
-function exportTxt() {
-    if (customers.length === 0) {
-        myAlert("Tidak ada data untuk diekspor!");
-        return;
-    }
+function simpanData(e) {
+  if (e) e.preventDefault();
 
-    // Mengonversi data ke string JSON agar struktur tetap terjaga
-    const dataStr = JSON.stringify(customers, null, 2);
-    const blob = new Blob([dataStr], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
+  const dataBaru = {
+    nama: document.getElementById("formNama").value.trim(),
+    perusahaan: document.getElementById("formPerusahaan").value,
+    kota: document.getElementById("formKota").value,
+    email: document.getElementById("formEmail").value.trim(),
+    hp: document.getElementById("formHp").value.trim(),
+    alamat: document.getElementById("formAlamat").value.trim(),
+  };
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Data_Customer_${new Date().toISOString().split("T")[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  // --- VALIDASI MANUAL ---
+
+  // 1. Cek field yang wajib diisi
+  if (
+    !dataBaru.nama ||
+    !dataBaru.perusahaan ||
+    !dataBaru.kota ||
+    !dataBaru.email ||
+    !dataBaru.hp ||
+    !dataBaru.alamat
+  ) {
+    return kasihTau(
+      "Semua data yang bertanda bintang (*) wajib diisi!",
+      null,
+      "error",
+    );
+  }
+
+  // 2. Validasi Format Email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(dataBaru.email)) {
+    return kasihTau("Format email tidak valid!", null, "error");
+  }
+
+  // 3. Validasi Format No HP (Angka saja, minimal 9 maksimal 15)
+  const hpRegex = /^[0-9]{9,15}$/;
+  if (!hpRegex.test(dataBaru.hp)) {
+    return kasihTau(
+      "Nomor HP harus berupa angka dan berjumlah 9-15 digit!",
+      null,
+      "error",
+    );
+  }
+
+  // --- PROSES SIMPAN DATA ---
+  dataPelanggan.push(dataBaru);
+  refreshTampilan();
+  cariSekarang();
+
+  const form = document.getElementById("customerForm");
+  if (form) form.reset();
+  document.getElementById("formNama").focus();
+
+  // Notif sukses
+  const notif = document.getElementById("successAlert");
+  if (notif) {
+    notif.classList.remove("hidden");
+    clearTimeout(timeoutSukses);
+    timeoutSukses = setTimeout(() => notif.classList.add("hidden"), 3000);
+  }
 }
 
-/**
- * Mengimpor data dari file .txt hasil ekspor sebelumnya.
- * @param {Event} event - Event change dari input file.
- */
-function importTxt(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+// --- EKSPOR & IMPOR ---
 
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const importedData = JSON.parse(e.target.result);
+function eksporData() {
+  if (dataPelanggan.length === 0)
+    return kasihTau("Belum ada data untuk diekspor!");
 
-            if (Array.isArray(importedData)) {
-                // Validasi struktur data yang diinginkan
-                const isValid = importedData.every(
-                    (item) => item.nama && item.perusahaan && item.kota
-                );
+  const isiJson = JSON.stringify(dataPelanggan, null, 2);
+  const blob = new Blob([isiJson], { type: "text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `Data_Pelanggan_${new Date().toISOString().split("T")[0]}.txt`;
+  link.click();
+}
 
-                if (isValid) {
-                    // Menggabungkan data lama dengan data baru yang diimpor
-                    customers = [...customers, ...importedData];
+function imporData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
 
-                    // Perbarui master data dropdown jika ada data baru di item yang diimpor
-                    importedData.forEach((c) => {
-                        if (!masterCities.includes(c.kota)) masterCities.push(c.kota);
-                        if (!masterCompanies.includes(c.perusahaan))
-                            masterCompanies.push(c.perusahaan);
-                    });
-
-                    renderDropdowns();
-                    renderAll();
-                    handleSearch();
-
-                    myAlert(`Berhasil mengimpor ${importedData.length} data customer.`);
-                } else {
-                    myAlert("Gagal mengimpor: Format data dalam file tidak sesuai struktur.");
-                }
-            } else {
-                myAlert("Gagal mengimpor: Format data tidak valid (bukan daftar/array).");
-            }
-        } catch (error) {
-            myAlert("Gagal mengimpor: File harus berisi format data yang valid hasil dari ekspor.");
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const hasil = JSON.parse(e.target.result);
+      if (Array.isArray(hasil)) {
+        const valid = hasil.every((p) => p.nama && p.perusahaan && p.kota);
+        if (valid) {
+          dataPelanggan = [...dataPelanggan, ...hasil];
+          // Update master list kalau ada yang baru
+          hasil.forEach((p) => {
+            if (!listKota.includes(p.kota)) listKota.push(p.kota);
+            if (!listPerusahaan.includes(p.perusahaan))
+              listPerusahaan.push(p.perusahaan);
+          });
+          updateDropdown();
+          refreshTampilan();
+          cariSekarang();
+          kasihTau(`Sip! ${hasil.length} data baru masuk.`);
+        } else {
+          kasihTau("Format datanya nggak sesuai.", null, "error");
         }
-
-        // Reset input file agar file yang sama bisa diimpor kembali jika perlu
-        event.target.value = "";
-    };
-
-    reader.readAsText(file);
+      } else {
+        kasihTau("Isi file-nya harus list array.", null, "error");
+      }
+    } catch (err) {
+      kasihTau("Gagal baca file. Pastikan formatnya bener.", null, "error");
+    }
+    event.target.value = "";
+  };
+  reader.readAsText(file);
 }

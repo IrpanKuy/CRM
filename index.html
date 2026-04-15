@@ -85,7 +85,7 @@
               <p
                 class="text-sm font-medium text-slate-600 uppercase tracking-wider"
               >
-                Total Customer
+                Total Pelanggan
               </p>
               <p class="text-3xl font-bold text-slate-900" id="statTotal">0</p>
             </div>
@@ -98,7 +98,7 @@
             <h3
               class="text-sm font-medium text-slate-600 uppercase tracking-wider mb-3"
             >
-              <i class="fas fa-city mr-1"></i> Customer per Kota
+              <i class="fas fa-city mr-1"></i> Pelanggan per Kota
             </h3>
             <div class="overflow-y-auto flex-1 pr-2" id="statCity">
               <p class="text-slate-500 text-sm">Belum ada data...</p>
@@ -112,7 +112,7 @@
             <h3
               class="text-sm font-medium text-slate-600 uppercase tracking-wider mb-3"
             >
-              <i class="fas fa-building mr-1"></i> Customer per Perusahaan
+              <i class="fas fa-building mr-1"></i> Pelanggan per Perusahaan
             </h3>
             <div class="overflow-y-auto flex-1 pr-2" id="statCompany">
               <p class="text-slate-500 text-sm">Belum ada data...</p>
@@ -128,14 +128,14 @@
         <div class="flex gap-2 w-full sm:w-auto">
           <button
             type="button"
-            onclick="openModal()"
+            onclick="bukaForm()"
             class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded shadow transition text-sm font-medium"
           >
-            <i class="fas fa-plus mr-1"></i> Tambah Customer
+            <i class="fas fa-plus mr-1"></i> Tambah Pelanggan
           </button>
           <button
             type="button"
-            onclick="exportTxt()"
+            onclick="eksporData()"
             class="bg-accent hover:bg-slate-700 text-white px-4 py-2 rounded shadow transition text-sm font-medium"
           >
             <i class="fas fa-file-export mr-1"></i> Export .txt
@@ -149,7 +149,7 @@
               id="importFile"
               accept=".txt"
               class="hidden"
-              onchange="importTxt(event)"
+              onchange="imporData(event)"
             />
           </label>
         </div>
@@ -159,7 +159,7 @@
             type="text"
             id="searchInput"
             placeholder="Cari data..."
-            onkeyup="handleSearch()"
+            onkeyup="cariSekarang()"
             class="w-full bg-gray-50 border border-slate-400 text-slate-800 text-sm rounded-lg focus:ring-slate-500 focus:border-slate-500 block pl-10 p-2 shadow-inner"
           />
           <div
@@ -179,7 +179,7 @@
             <thead class="text-xs text-slate-200 uppercase bg-darkPanel">
               <tr>
                 <th scope="col" class="px-6 py-4">No</th>
-                <th scope="col" class="px-6 py-4">Nama Customer</th>
+                <th scope="col" class="px-6 py-4">Nama Pelanggan</th>
                 <th scope="col" class="px-6 py-4">Perusahaan</th>
                 <th scope="col" class="px-6 py-4">Kota</th>
                 <th scope="col" class="px-6 py-4">Email</th>
@@ -194,12 +194,12 @@
         </div>
         <div id="emptyState" class="hidden p-8 text-center text-slate-500">
           <i class="fas fa-box-open text-4xl mb-3 text-slate-300"></i>
-          <p>Data customer tidak ditemukan.</p>
+          <p>Data pelanggan tidak ditemukan.</p>
         </div>
       </section>
     </main>
 
-    <!-- Form Modal (Tambah Customer) -->
+    <!-- Form Modal (Tambah Pelanggan) -->
     <div
       id="customerModal"
       class="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm hidden justify-center items-center z-50"
@@ -211,11 +211,11 @@
           class="flex justify-between items-center p-4 border-b border-slate-300 bg-cardBg rounded-t-lg"
         >
           <h3 class="text-lg font-bold text-slate-800">
-            <i class="fas fa-user-plus mr-2 text-slate-600"></i>Tambah Customer
+            <i class="fas fa-user-plus mr-2 text-slate-600"></i>Tambah Pelanggan
           </h3>
           <button
             type="button"
-            onclick="closeModal()"
+            onclick="tutupForm()"
             class="text-slate-500 hover:text-slate-800 transition"
           >
             <i class="fas fa-times text-xl"></i>
@@ -230,15 +230,14 @@
           <i class="fas fa-check-circle mr-1"></i> Data berhasil ditambahkan!
         </div>
 
-        <form id="customerForm" class="p-4 space-y-4">
+        <form id="customerForm" class="p-4 space-y-4" novalidate>
           <div>
             <label class="block mb-1 text-sm font-medium text-slate-700"
-              >Nama Customer <span class="text-red-500">*</span></label
+              >Nama Pelanggan <span class="text-red-500">*</span></label
             >
             <input
               type="text"
               id="formNama"
-              required
               class="bg-white border border-slate-300 text-slate-900 text-sm rounded focus:ring-slate-500 focus:border-slate-500 block w-full p-2 shadow-sm"
             />
           </div>
@@ -251,14 +250,13 @@
               <div class="flex gap-1">
                 <select
                   id="formPerusahaan"
-                  required
                   class="flex-1 bg-white border border-slate-300 text-slate-900 text-sm rounded focus:ring-slate-500 focus:border-slate-500 block w-full p-2 shadow-sm"
                 >
                   <option value="">Pilih Perusahaan</option>
                 </select>
                 <button
                   type="button"
-                  onclick="addCompany()"
+                  onclick="tambahDataPT()"
                   class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 rounded border border-slate-300 transition"
                   title="Tambah Perusahaan Baru"
                 >
@@ -266,7 +264,7 @@
                 </button>
                 <button
                   type="button"
-                  onclick="deleteCompany()"
+                  onclick="hapusDataPT()"
                   class="bg-red-100 hover:bg-red-200 text-red-600 px-3 rounded border border-red-200 transition"
                   title="Hapus Perusahaan Terpilih"
                 >
@@ -281,14 +279,13 @@
               <div class="flex gap-1">
                 <select
                   id="formKota"
-                  required
                   class="flex-1 bg-white border border-slate-300 text-slate-900 text-sm rounded focus:ring-slate-500 focus:border-slate-500 block w-full p-2 shadow-sm"
                 >
                   <option value="">Pilih Kota</option>
                 </select>
                 <button
                   type="button"
-                  onclick="addCity()"
+                  onclick="tambahDataKota()"
                   class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 rounded border border-slate-300 transition"
                   title="Tambah Kota Baru"
                 >
@@ -296,7 +293,7 @@
                 </button>
                 <button
                   type="button"
-                  onclick="deleteCity()"
+                  onclick="hapusDataKota()"
                   class="bg-red-100 hover:bg-red-200 text-red-600 px-3 rounded border border-red-200 transition"
                   title="Hapus Kota Terpilih"
                 >
@@ -314,7 +311,6 @@
               <input
                 type="email"
                 id="formEmail"
-                required
                 class="bg-white border border-slate-300 text-slate-900 text-sm rounded focus:ring-slate-500 focus:border-slate-500 block w-full p-2 shadow-sm"
               />
             </div>
@@ -325,9 +321,6 @@
               <input
                 type="tel"
                 id="formHp"
-                required
-                pattern="[0-9]{9,15}"
-                title="Masukkan nomor HP yang valid (angka saja)"
                 class="bg-white border border-slate-300 text-slate-900 text-sm rounded focus:ring-slate-500 focus:border-slate-500 block w-full p-2 shadow-sm"
               />
             </div>
@@ -339,7 +332,6 @@
             >
             <textarea
               id="formAlamat"
-              required
               rows="2"
               class="bg-white border border-slate-300 text-slate-900 text-sm rounded focus:ring-slate-500 focus:border-slate-500 block w-full p-2 shadow-sm resize-none"
             ></textarea>
@@ -350,7 +342,7 @@
           >
             <button
               type="button"
-              onclick="closeModal()"
+              onclick="tutupForm()"
               class="text-slate-600 bg-slate-200 hover:bg-slate-300 focus:ring-4 focus:outline-none focus:ring-slate-200 rounded text-sm font-medium px-5 py-2.5 transition"
             >
               Batal
@@ -366,27 +358,66 @@
       </div>
     </div>
 
-    <!-- Modal Dialog Kustom (Alert / Confirm / Prompt) -->
+    <!-- Modal Alert & Konfirmasi -->
     <div
-      id="customDialogModal"
-      class="fixed inset-0 bg-slate-900 bg-opacity-70 backdrop-blur-sm hidden justify-center items-center z-[60]"
+      id="alertModal"
+      class="fixed inset-0 bg-slate-900 bg-opacity-70 backdrop-blur-sm hidden justify-center items-center z-[70]"
     >
       <div
         class="bg-white rounded-lg shadow-xl border border-slate-300 w-full max-w-sm mx-4 overflow-hidden transform transition-all scale-95 opacity-0"
-        id="customDialogBox"
+        id="alertBox"
       >
         <div
           class="p-4 border-b border-slate-200 bg-slate-50 flex items-center"
         >
-          <i id="dialogIcon" class="fas fa-info-circle text-slate-500 mr-2"></i>
-          <h3 id="dialogTitle" class="font-bold text-slate-800">Judul</h3>
+          <i id="alertIcon" class="fas fa-info-circle text-slate-500 mr-2"></i>
+          <h3 id="alertTitle" class="font-bold text-slate-800">Info</h3>
         </div>
         <div class="p-5">
-          <p id="dialogMessage" class="text-sm text-slate-600 mb-3"></p>
+          <p id="alertMessage" class="text-sm text-slate-600"></p>
+        </div>
+        <div
+          class="p-3 bg-slate-50 flex justify-end space-x-2 border-t border-slate-200"
+        >
+          <button
+            type="button"
+            id="alertBtnCancel"
+            class="hidden px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded transition"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            id="alertBtnOk"
+            class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium rounded transition shadow"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Prompt (Input Text) -->
+    <div
+      id="promptModal"
+      class="fixed inset-0 bg-slate-900 bg-opacity-70 backdrop-blur-sm hidden justify-center items-center z-[60]"
+    >
+      <div
+        class="bg-white rounded-lg shadow-xl border border-slate-300 w-full max-w-sm mx-4 overflow-hidden transform transition-all scale-95 opacity-0"
+        id="promptBox"
+      >
+        <div
+          class="p-4 border-b border-slate-200 bg-slate-50 flex items-center"
+        >
+          <i class="fas fa-edit text-slate-500 mr-2"></i>
+          <h3 id="promptTitle" class="font-bold text-slate-800">Input Baru</h3>
+        </div>
+        <div class="p-5">
+          <p id="promptMessage" class="text-sm text-slate-600 mb-3"></p>
           <input
             type="text"
-            id="dialogInput"
-            class="hidden w-full bg-white border border-slate-300 text-slate-900 text-sm rounded focus:ring-slate-500 focus:border-slate-500 p-2 shadow-sm outline-none"
+            id="promptInput"
+            class="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded focus:ring-slate-500 focus:border-slate-500 p-2 shadow-sm outline-none"
           />
         </div>
         <div
@@ -394,14 +425,14 @@
         >
           <button
             type="button"
-            id="dialogBtnCancel"
-            class="hidden px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded transition"
+            id="promptBtnCancel"
+            class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded transition"
           >
             Batal
           </button>
           <button
             type="button"
-            id="dialogBtnOk"
+            id="promptBtnOk"
             class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium rounded transition shadow"
           >
             OK
